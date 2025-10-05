@@ -1,22 +1,24 @@
 import express from "express";
-import cors from "cors";
 import dotenv from "dotenv";
 import sgMail from "@sendgrid/mail";
 
 dotenv.config();
 const app = express();
 
-// CORS configuration
-const corsOptions = {
-  origin: ["https://talrn-react-frontend.vercel.app"],
-  methods: ["GET", "POST", "OPTIONS"],
-  credentials: true,
-  allowedHeaders: ["Content-Type", "Authorization"]
-};
+// Manual CORS headers (more reliable)
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', 'https://talrn-react-frontend.vercel.app');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  res.header('Access-Control-Allow-Credentials', 'true');
+  
+  // Handle preflight
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(200);
+  }
+  next();
+});
 
-app.use(cors(corsOptions));
-
-// Body parser (built into Express 5)
 app.use(express.json());
 
 const PORT = process.env.PORT || 5000;
