@@ -1,25 +1,29 @@
 import express from "express";
 import cors from "cors";
-import bodyParser from "body-parser";
 import dotenv from "dotenv";
 import sgMail from "@sendgrid/mail";
 
 dotenv.config();
+
 const app = express();
 
 // ✅ Allow only your Vercel frontend to access backend
 app.use(cors({
-  origin: ["https://talrn-react-frontend.vercel.app"], // frontend URL
+  origin: ["https://talrn-react-frontend.vercel.app"],
   methods: ["GET", "POST"],
   credentials: true
 }));
 
-app.use(bodyParser.json());
+app.use(express.json()); // use built-in body parser
 
-const PORT = process.env.PORT || 5000; // uses Render's dynamic port
+const PORT = process.env.PORT || 5000;
+
 sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 
 const otpStore = new Map();
+
+// Test backend URL
+app.get("/", (req, res) => res.send("Backend is running!"));
 
 // Send OTP
 app.post("/api/send-otp", (req, res) => {
@@ -57,8 +61,5 @@ app.post("/api/verify-otp", (req, res) => {
   otpStore.delete(email);
   res.json({ message: "OTP verified successfully" });
 });
-
-// Test backend URL
-app.get("/", (req, res) => res.send("Backend is running!"));
 
 app.listen(PORT, () => console.log(`Backend running on port ${PORT}`));
