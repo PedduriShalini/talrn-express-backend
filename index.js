@@ -6,10 +6,17 @@ import sgMail from "@sendgrid/mail";
 
 dotenv.config();
 const app = express();
-app.use(cors());
+
+// ✅ Allow only your Vercel frontend to access backend
+app.use(cors({
+  origin: ["https://talrn-react-frontend.vercel.app"], // frontend URL
+  methods: ["GET", "POST"],
+  credentials: true
+}));
+
 app.use(bodyParser.json());
 
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 5000; // uses Render's dynamic port
 sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 
 const otpStore = new Map();
@@ -22,10 +29,8 @@ app.post("/api/send-otp", (req, res) => {
   const otp = Math.floor(100000 + Math.random() * 900000).toString();
   otpStore.set(email, { otp, expires: Date.now() + 5 * 60 * 1000 });
 
-  // ✅ Log OTP to console for testing
   console.log(`Generated OTP for ${email}: ${otp}`);
 
-  // Send via SendGrid (optional if you want real email)
   const msg = {
     to: email,
     from: process.env.FROM_EMAIL,
@@ -36,7 +41,7 @@ app.post("/api/send-otp", (req, res) => {
 
   sgMail
     .send(msg)
-    .then(() => res.json({ message: "OTP sent to email (check console if using fake email)" }))
+    .then(() => res.json({ message: "OTP sent successfully!" }))
     .catch((err) => res.status(500).json({ message: err.message }));
 });
 
@@ -53,7 +58,7 @@ app.post("/api/verify-otp", (req, res) => {
   res.json({ message: "OTP verified successfully" });
 });
 
-// Optional: test backend URL
+// Test backend URL
 app.get("/", (req, res) => res.send("Backend is running!"));
 
-app.listen(PORT, () => console.log(`Backend running on http://localhost:${PORT}`));
+app.listen(PORT, () => console.log(`Backend running on port ${PORT}`));
