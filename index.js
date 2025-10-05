@@ -4,36 +4,29 @@ import dotenv from "dotenv";
 import sgMail from "@sendgrid/mail";
 
 dotenv.config();
-
 const app = express();
 
-// ✅ Allow only your Vercel frontend to access backend
 app.use(cors({
-  origin: ["https://talrn-react-frontend.vercel.app"],
-  methods: ["GET", "POST"],
-  credentials: true
+  origin: "*",
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"]
 }));
 
-app.use(express.json()); // use built-in body parser
+app.use(express.json());
 
 const PORT = process.env.PORT || 5000;
-
 sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 
 const otpStore = new Map();
 
-// Test backend URL
 app.get("/", (req, res) => res.send("Backend is running!"));
 
-// Send OTP
 app.post("/api/send-otp", (req, res) => {
   const { email } = req.body;
   if (!email) return res.status(400).json({ message: "Email is required" });
 
   const otp = Math.floor(100000 + Math.random() * 900000).toString();
   otpStore.set(email, { otp, expires: Date.now() + 5 * 60 * 1000 });
-
-  console.log(`Generated OTP for ${email}: ${otp}`);
 
   const msg = {
     to: email,
@@ -43,13 +36,11 @@ app.post("/api/send-otp", (req, res) => {
     html: `<p>Your OTP is <strong>${otp}</strong></p>`,
   };
 
-  sgMail
-    .send(msg)
+  sgMail.send(msg)
     .then(() => res.json({ message: "OTP sent successfully!" }))
-    .catch((err) => res.status(500).json({ message: err.message }));
+    .catch(err => res.status(500).json({ message: err.message }));
 });
 
-// Verify OTP
 app.post("/api/verify-otp", (req, res) => {
   const { email, otp } = req.body;
   const record = otpStore.get(email);
