@@ -7,23 +7,19 @@ import sgMail from "@sendgrid/mail";
 dotenv.config();
 const app = express();
 
-const ALLOWED_ORIGIN = 'https://talrn-react-frontend.vercel.app'; 
+const allowedOrigins = process.env.NODE_ENV === 'production' 
+  ? ["https://talrn-react-frontend.vercel.app"]
+  : ["http://localhost:5173", "http://localhost:5174", "http://localhost:3000"];
 
-// 1. The ONLY CORS configuration needed (it handles OPTIONS requests internally)
 app.use(cors({
-    origin: ALLOWED_ORIGIN,
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"], 
-    allowedHeaders: ["Content-Type", "Authorization"], 
-    credentials: true, 
-    maxAge: 3600 
+  origin: allowedOrigins,
+  methods: ["GET","POST","OPTIONS"],
+  credentials: true
 }));
-
-// 2. Remove the conflicting line: app.options("*", cors()); // <--- REMOVE THIS!
 
 app.use(bodyParser.json());
 
 const PORT = process.env.PORT || 5000;
-// ... rest of your code is perfect ...
 sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 
 const otpStore = new Map();
@@ -43,10 +39,9 @@ app.post("/api/send-otp", (req, res) => {
     html: `<p>Your OTP is <strong>${otp}</strong></p>`,
   };
 
-  sgMail
-    .send(msg)
+  sgMail.send(msg)
     .then(() => res.json({ message: "OTP sent successfully!" }))
-    .catch((err) => res.status(500).json({ message: err.message }));
+    .catch(err => res.status(500).json({ message: err.message }));
 });
 
 app.post("/api/verify-otp", (req, res) => {
@@ -61,6 +56,6 @@ app.post("/api/verify-otp", (req, res) => {
   res.json({ message: "OTP verified successfully" });
 });
 
-app.get("/", (req, res) => res.send("Backend is running!"));
+app.get("/", (req, res) => res.send("Backend running!"));
 
 app.listen(PORT, () => console.log(`Backend running on port ${PORT}`));
