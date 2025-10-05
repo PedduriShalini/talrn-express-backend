@@ -6,16 +6,15 @@ import sgMail from "@sendgrid/mail";
 dotenv.config();
 const app = express();
 
-// CORS MUST come before other middleware
-app.use(cors({
+// CORS configuration
+const corsOptions = {
   origin: ["https://talrn-react-frontend.vercel.app"],
   methods: ["GET", "POST", "OPTIONS"],
   credentials: true,
   allowedHeaders: ["Content-Type", "Authorization"]
-}));
+};
 
-// Handle preflight requests explicitly
-app.options('*', cors());
+app.use(cors(corsOptions));
 
 // Body parser (built into Express 5)
 app.use(express.json());
