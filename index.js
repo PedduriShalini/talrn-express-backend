@@ -55,34 +55,18 @@ app.post("/api/send-otp", async (req, res) => {
       html: `<p>Your OTP is <strong>${otp}</strong></p>`,
     };
 
-    await sgMail.send(msg);
-    console.log(`OTP email sent successfully to ${email}`);
-    res.json({ message: "OTP sent successfully!" });
+    // Send email and log detailed errors if something fails
+    try {
+      await sgMail.send(msg);
+      console.log(`OTP email sent successfully to ${email}`);
+      res.json({ message: "OTP sent successfully!" });
+    } catch (err) {
+      console.error("SendGrid error details:", err.response ? err.response.body : err);
+      res.status(500).json({ message: "Internal Server Error" });
+    }
+
   } catch (err) {
-    console.error("Error in /api/send-otp:", err);
+    console.error("Unexpected error in /api/send-otp:", err);
     res.status(500).json({ message: "Internal Server Error" });
   }
 });
-
-// POST /api/verify-otp
-app.post("/api/verify-otp", (req, res) => {
-  try {
-    const { email, otp } = req.body;
-    const record = otpStore.get(email);
-
-    if (!record) return res.status(400).json({ message: "No OTP found for this email" });
-    if (record.expires < Date.now()) return res.status(400).json({ message: "OTP expired" });
-    if (record.otp !== otp) return res.status(400).json({ message: "Invalid OTP" });
-
-    otpStore.delete(email);
-    res.json({ message: "OTP verified successfully" });
-  } catch (err) {
-    console.error("Error in /api/verify-otp:", err);
-    res.status(500).json({ message: "Internal Server Error" });
-  }
-});
-
-// GET / (health check)
-app.get("/", (req, res) => res.send("Backend running!"));
-
-app.listen(PORT, () => console.log(`Backend running on port ${PORT}`));
