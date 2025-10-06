@@ -1,35 +1,50 @@
 import express from "express";
 import dotenv from "dotenv";
 import sgMail from "@sendgrid/mail";
-import cors from "cors";
 
 dotenv.config();
 const app = express();
-const PORT = process.env.PORT || 5000;
+
+// Check environment variables
+if (!process.env.SENDGRID_API_KEY) {
+  console.error("Error: SENDGRID_API_KEY is not set in environment variables!");
+}
+if (!process.env.FROM_EMAIL) {
+  console.error("Error: FROM_EMAIL is not set in environment variables!");
+}
 
 sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 
-// Use CORS package for simplicity
-app.use(cors({
-  origin: "https://talrn-react-frontend.vercel.app",
-  credentials: true,
-  methods: ["GET", "POST", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization"]
-}));
+// Manual CORS headers
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', 'https://talrn-react-frontend.vercel.app');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  res.header('Access-Control-Allow-Credentials', 'true');
+
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(200);
+  }
+  next();
+});
 
 app.use(express.json());
 
+const PORT = process.env.PORT || 5000;
 const otpStore = new Map();
 
-// Send OTP
+// POST /api/send-otp
 app.post("/api/send-otp", async (req, res) => {
   try {
+    console.log("Request body:", req.body);
     const { email } = req.body;
-    if (!email) return res.status(400).json({ message: "Email is required" });
+    if (!email) {
+      console.warn("No email provided in request");
+      return res.status(400).json({ message: "Email is required" });
+    }
 
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     otpStore.set(email, { otp, expires: Date.now() + 5 * 60 * 1000 });
-
     console.log(`Generated OTP for ${email}: ${otp}`);
 
     const msg = {
@@ -41,14 +56,15 @@ app.post("/api/send-otp", async (req, res) => {
     };
 
     await sgMail.send(msg);
+    console.log(`OTP email sent successfully to ${email}`);
     res.json({ message: "OTP sent successfully!" });
   } catch (err) {
-    console.error("Error sending OTP:", err);
+    console.error("Error in /api/send-otp:", err);
     res.status(500).json({ message: "Internal Server Error" });
   }
 });
 
-// Verify OTP
+// POST /api/verify-otp
 app.post("/api/verify-otp", (req, res) => {
   try {
     const { email, otp } = req.body;
@@ -61,11 +77,12 @@ app.post("/api/verify-otp", (req, res) => {
     otpStore.delete(email);
     res.json({ message: "OTP verified successfully" });
   } catch (err) {
-    console.error("Error verifying OTP:", err);
+    console.error("Error in /api/verify-otp:", err);
     res.status(500).json({ message: "Internal Server Error" });
   }
 });
 
+// GET / (health check)
 app.get("/", (req, res) => res.send("Backend running!"));
 
 app.listen(PORT, () => console.log(`Backend running on port ${PORT}`));
